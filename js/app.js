@@ -159,39 +159,43 @@ async function handleEdit() {
 }
 
 async function editPhotoWithAI(imageDataURL, prompt, apiKey) {
-  const response = await fetch('https://api.replicate.com/v1/models/timothybrooks/instruct-pix2pix/predictions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Token ${apiKey}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'wait',
-    },
-    body: JSON.stringify({
-      input: {
-        image: imageDataURL,
-        prompt: prompt,
-        num_inference_steps: 100,
-        image_guidance_scale: 1.5,
-        guidance_scale: 7.5,
-        num_outputs: 1,
+  // Resize to 512px — optimal size for InstructPix2Pix
+  const resized = await resizeImageAsync(imageDataURL, 512);
+
+  let response;
+  try {
+    response = await fetch('https://api.replicate.com/v1/models/timothybrooks/instruct-pix2pix/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${apiKey}`,
+        'Content-Type': 'application/json',
       },
-    }),
-  });
+      body: JSON.stringify({
+        input: {
+          image: resized,
+          prompt: prompt,
+          num_inference_steps: 100,
+          image_guidance_scale: 1.5,
+          guidance_scale: 7.5,
+          num_outputs: 1,
+        },
+      }),
+    });
+  } catch (networkErr) {
+    throw new Error('Network error — check your internet connection and that the API key is correct');
+  }
 
   if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || `API error ${response.status}`);
+    let msg = `API error ${response.status}`;
+    try {
+      const err = await response.json();
+      msg = err.detail || err.message || msg;
+    } catch {}
+    throw new Error(msg);
   }
 
   const data = await response.json();
-
-  // If completed immediately (Prefer: wait header)
-  if (data.status === 'succeeded') {
-    return Array.isArray(data.output) ? data.output[0] : data.output;
-  }
-
-  // Otherwise poll
-  if (!data.id) throw new Error('No prediction ID returned');
+  if (!data.id) throw new Error('No prediction ID returned from Replicate');
   return pollPrediction(data.id, apiKey, 'edit');
 }
 
@@ -438,6 +442,10 @@ function resizeImage(dataURL, maxSize, cb) {
     cb(c.toDataURL('image/jpeg', 0.88));
   };
   img.src = dataURL;
+}
+
+function resizeImageAsync(dataURL, maxSize) {
+  return new Promise(resolve => resizeImage(dataURL, maxSize, resolve));
 }
 
 function downloadDataURL(url, filename) {
