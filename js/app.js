@@ -1,266 +1,462 @@
-/* App — gallery state, view routing, event wiring */
+/* ─── State ─── */
+const state = {
+  editImageData: null,   // base64 data URL of selected photo for editing
+  videoImageData: null,  // base64 data URL of selected photo for video
+  videoDuration: 5,
+  videoRatio: '1280:768',
+  videoProvider: 'runway',
+};
 
-const App = (() => {
-  let photos = [];       // { id, name, src }
-  let activePhoto = null;
-  let currentView = 'gallery';  // 'gallery' | 'editor'
-  let editorTab = 'edit';       // 'edit' | 'video'
-  let isGenerating = false;
-  let progressTimer = null;
+/* ─── Init ─── */
+document.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  wireUpload('edit');
+  wireUpload('video');
+  wireChips();
+  wireSegControls();
+  wireActionButtons();
+  wireSettings();
+});
 
-  function init() {
-    loadPhotosFromStorage();
-    Editor.init(document.getElementById('main-canvas'));
-    VideoGen.init();
-    wireGallery();
-    wireEditor();
-    wireSettings();
-    renderGallery();
-  }
+/* ─── Upload handling ─── */
+function wireUpload(section) {
+  const fileInput   = document.getElementById(`${section}-file`);
+  const box         = document.getElementById(`${section}-upload-box`);
+  const preview     = document.getElementById(`${section}-preview`);
+  const placeholder = document.getElementById(`${section}-placeholder`);
+  const swapBtn     = document.getElementById(`${section}-swap-btn`);
 
-  /* ─── Gallery ─── */
-  function wireGallery() {
-    document.getElementById('file-input').addEventListener('change', e => {
-      const files = Array.from(e.target.files);
-      files.forEach(file => loadFile(file));
-      e.target.value = '';
-    });
-  }
-
-  function loadFile(file) {
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      const photo = { id: Date.now() + Math.random(), name: file.name, src: ev.target.result };
-      photos.push(photo);
-      savePhotosToStorage();
-      renderGallery();
+      const dataURL = ev.target.result;
+      resizeImage(dataURL, 1024, compressed => {
+        if (section === 'edit') state.editImageData = compressed;
+        else state.videoImageData = compressed;
+        preview.src = compressed;
+        preview.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        swapBtn.classList.remove('hidden');
+        box.classList.add('has-image');
+        updateActionBtn(section);
+      });
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
+  });
+
+  // Clicking swap re-triggers file input
+  swapBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    fileInput.click();
+  });
+}
+
+/* ─── Chips — insert prompt text ─── */
+function wireChips() {
+  document.querySelectorAll('#section-edit .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const ta = document.getElementById('edit-prompt');
+      ta.value = chip.dataset.insert;
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+    });
+  });
+  document.querySelectorAll('#section-video .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const ta = document.getElementById('video-prompt');
+      ta.value = chip.dataset.insert;
+      ta.focus();
+    });
+  });
+}
+
+/* ─── Segmented controls (duration + ratio) ─── */
+function wireSegControls() {
+  document.querySelectorAll('[data-duration]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-duration]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.videoDuration = +btn.dataset.duration;
+    });
+  });
+  document.querySelectorAll('[data-vratio]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-vratio]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.videoRatio = btn.dataset.vratio;
+    });
+  });
+}
+
+/* ─── Enable/disable action buttons ─── */
+function updateActionBtn(section) {
+  if (section === 'edit') {
+    document.getElementById('btn-edit').disabled = !state.editImageData;
+  } else {
+    document.getElementById('btn-generate').disabled = !state.videoImageData;
+  }
+}
+
+/* ─── Action buttons ─── */
+function wireActionButtons() {
+  document.getElementById('btn-edit').addEventListener('click', handleEdit);
+  document.getElementById('btn-generate').addEventListener('click', handleVideo);
+
+  document.getElementById('btn-save-edit').addEventListener('click', () => {
+    const img = document.getElementById('edit-result-img');
+    if (!img.src) return;
+    downloadDataURL(img.src, 'frameforge-edit.jpg');
+  });
+
+  document.getElementById('btn-save-video').addEventListener('click', () => {
+    const video = document.getElementById('video-result');
+    if (!video.src) return;
+    const a = document.createElement('a');
+    a.href = video.src;
+    a.download = 'frameforge-video.mp4';
+    a.click();
+  });
+
+  document.getElementById('btn-use-for-video').addEventListener('click', () => {
+    const resultImg = document.getElementById('edit-result-img');
+    if (!resultImg.src) return;
+    state.videoImageData = resultImg.src;
+    document.getElementById('video-preview').src = resultImg.src;
+    document.getElementById('video-preview').classList.remove('hidden');
+    document.getElementById('video-placeholder').classList.add('hidden');
+    document.getElementById('video-swap-btn').classList.remove('hidden');
+    document.getElementById('video-upload-box').classList.add('has-image');
+    updateActionBtn('video');
+    document.getElementById('section-video').scrollIntoView({ behavior: 'smooth' });
+    toast('Photo set as video source', 'success');
+  });
+}
+
+/* ─── Photo Editing via Replicate InstructPix2Pix ─── */
+async function handleEdit() {
+  const prompt = document.getElementById('edit-prompt').value.trim();
+  if (!prompt) { toast('Describe what you want to change first', 'error'); return; }
+  if (!state.editImageData) { toast('Add a photo first', 'error'); return; }
+
+  const apiKey = getKey('replicate');
+  if (!apiKey) { toast('Add your Replicate API key in Settings ⚙️', 'error'); return; }
+
+  setEditLoading(true);
+
+  try {
+    const resultUrl = await editPhotoWithAI(state.editImageData, prompt, apiKey);
+    document.getElementById('edit-result-img').src = resultUrl;
+    document.getElementById('edit-result-wrap').classList.remove('hidden');
+    toast('Edit applied!', 'success');
+  } catch (err) {
+    toast(err.message || 'Edit failed — check your API key', 'error');
+  } finally {
+    setEditLoading(false);
+  }
+}
+
+async function editPhotoWithAI(imageDataURL, prompt, apiKey) {
+  const response = await fetch('https://api.replicate.com/v1/models/timothybrooks/instruct-pix2pix/predictions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Token ${apiKey}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'wait',
+    },
+    body: JSON.stringify({
+      input: {
+        image: imageDataURL,
+        prompt: prompt,
+        num_inference_steps: 100,
+        image_guidance_scale: 1.5,
+        guidance_scale: 7.5,
+        num_outputs: 1,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || `API error ${response.status}`);
   }
 
-  function renderGallery() {
-    const grid = document.getElementById('gallery-grid');
-    const empty = document.getElementById('gallery-empty');
-    grid.innerHTML = '';
-    if (photos.length === 0) {
-      empty.classList.remove('hidden');
-      return;
+  const data = await response.json();
+
+  // If completed immediately (Prefer: wait header)
+  if (data.status === 'succeeded') {
+    return Array.isArray(data.output) ? data.output[0] : data.output;
+  }
+
+  // Otherwise poll
+  if (!data.id) throw new Error('No prediction ID returned');
+  return pollPrediction(data.id, apiKey, 'edit');
+}
+
+/* ─── Video Generation ─── */
+async function handleVideo() {
+  const prompt = document.getElementById('video-prompt').value.trim();
+  if (!prompt) { toast('Describe the motion and mood first', 'error'); return; }
+  if (!state.videoImageData) { toast('Add a photo first', 'error'); return; }
+
+  const provider = state.videoProvider;
+  const apiKey   = getKey(provider === 'runway' ? 'runway' : 'replicate');
+  if (!apiKey) {
+    toast(`Add your ${provider === 'runway' ? 'Runway ML' : 'Replicate'} API key in Settings ⚙️`, 'error');
+    return;
+  }
+
+  setVideoLoading(true);
+
+  try {
+    let videoUrl;
+    if (provider === 'runway') {
+      videoUrl = await generateRunway(state.videoImageData, prompt, apiKey);
+    } else {
+      videoUrl = await generateReplicateVideo(state.videoImageData, prompt, apiKey);
     }
-    empty.classList.add('hidden');
-    photos.forEach(photo => {
-      const item = document.createElement('div');
-      item.className = 'gallery-item';
-      item.innerHTML = `
-        <img src="${photo.src}" alt="${escHtml(photo.name)}" loading="lazy" />
-        <div class="item-overlay"><span class="item-name">${escHtml(photo.name)}</span></div>
-        <button class="item-delete" data-id="${photo.id}" title="Remove">
-          <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-        </button>
-      `;
-      item.querySelector('img').addEventListener('click', () => openEditor(photo));
-      item.querySelector('.item-delete').addEventListener('click', e => {
-        e.stopPropagation();
-        deletePhoto(photo.id);
-      });
-      grid.appendChild(item);
-    });
+    const videoEl = document.getElementById('video-result');
+    videoEl.src = videoUrl;
+    document.getElementById('video-result-wrap').classList.remove('hidden');
+    toast('Video ready!', 'success');
+  } catch (err) {
+    toast(err.message || 'Generation failed — check your API key', 'error');
+  } finally {
+    setVideoLoading(false);
+  }
+}
+
+async function generateRunway(imageDataURL, prompt, apiKey) {
+  const motionHint = getMotionHint();
+  const fullPrompt = [prompt, motionHint].filter(Boolean).join(', ');
+
+  const res = await fetch('https://api.dev.runwayml.com/v1/image_to_video', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'X-Runway-Version': '2024-11-06',
+    },
+    body: JSON.stringify({
+      promptImage: imageDataURL,
+      promptText: fullPrompt,
+      model: 'gen3a_turbo',
+      duration: state.videoDuration,
+      ratio: state.videoRatio,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Runway error ${res.status}`);
   }
 
-  function deletePhoto(id) {
-    photos = photos.filter(p => p.id !== id);
-    savePhotosToStorage();
-    renderGallery();
+  const { id } = await res.json();
+  return pollRunway(id, apiKey);
+}
+
+async function pollRunway(taskId, apiKey) {
+  for (let i = 0; i < 120; i++) {
+    await delay(3000);
+    const res = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'X-Runway-Version': '2024-11-06' },
+    });
+    if (!res.ok) continue;
+    const data = await res.json();
+    updateVideoProgress(Math.min(i / 40 * 90, 88));
+    if (data.status === 'SUCCEEDED') return data.output?.[0];
+    if (data.status === 'FAILED') throw new Error(data.failure || 'Runway generation failed');
+  }
+  throw new Error('Timed out — try again');
+}
+
+async function generateReplicateVideo(imageDataURL, prompt, apiKey) {
+  const motionBucket = 100;
+  const res = await fetch('https://api.replicate.com/v1/models/stability-ai/stable-video-diffusion/predictions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Token ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      input: {
+        input_image: imageDataURL,
+        frames_per_second: 6,
+        num_frames: state.videoDuration * 6,
+        motion_bucket_id: motionBucket,
+        cond_aug: 0.02,
+        decoding_t: 7,
+        output_format: 'mp4',
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Replicate error ${res.status}`);
   }
 
-  function openEditor(photo) {
-    activePhoto = photo;
-    currentView = 'editor';
-    editorTab = 'edit';
+  const { id } = await res.json();
+  return pollPrediction(id, apiKey, 'video');
+}
 
-    document.getElementById('view-gallery').classList.remove('active');
-    document.getElementById('view-editor').classList.add('active');
-    document.getElementById('btn-back').classList.remove('hidden');
-    document.getElementById('view-tabs').classList.remove('hidden');
-
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === 'edit'));
-    document.getElementById('panel-edit').classList.remove('hidden');
-    document.getElementById('panel-video').classList.add('hidden');
-
-    const img = new Image();
-    img.onload = () => {
-      Editor.loadImage(img);
-      Editor.updateFilterThumbs();
-    };
-    img.src = photo.src;
-
-    // Pre-fill video source
-    document.getElementById('video-source-img').src = photo.src;
-  }
-
-  /* ─── Editor wiring ─── */
-  function wireEditor() {
-    document.getElementById('btn-back').addEventListener('click', goToGallery);
-
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => switchTab(btn.dataset.view));
+async function pollPrediction(id, apiKey, section) {
+  for (let i = 0; i < 120; i++) {
+    await delay(3000);
+    const res = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
+      headers: { 'Authorization': `Token ${apiKey}` },
     });
+    if (!res.ok) continue;
+    const data = await res.json();
 
-    document.getElementById('btn-reset').addEventListener('click', () => {
-      if (!activePhoto) return;
-      const img = new Image();
-      img.onload = () => { Editor.loadImage(img); Editor.updateFilterThumbs(); };
-      img.src = activePhoto.src;
-    });
+    const pct = Math.min(i / 40 * 90, 88);
+    if (section === 'edit') updateEditProgress(pct, data.logs?.split('\n').pop() || 'Processing…');
+    else updateVideoProgress(pct);
 
-    document.getElementById('btn-download-photo').addEventListener('click', () => {
-      Editor.getBlob(blob => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = activePhoto ? activePhoto.name.replace(/\.[^.]+$/, '') + '_edited.jpg' : 'edited.jpg';
-        a.click();
-        URL.revokeObjectURL(a.href);
-      });
-    });
-
-    document.getElementById('btn-generate').addEventListener('click', startGenerate);
-
-    document.getElementById('btn-download-video').addEventListener('click', () => {
-      const video = document.getElementById('video-result');
-      if (!video.src) return;
-      const a = document.createElement('a');
-      a.href = video.src;
-      a.download = 'frameforge_video.mp4';
-      a.click();
-    });
-  }
-
-  function goToGallery() {
-    currentView = 'gallery';
-    document.getElementById('view-gallery').classList.add('active');
-    document.getElementById('view-editor').classList.remove('active');
-    document.getElementById('btn-back').classList.add('hidden');
-    document.getElementById('view-tabs').classList.add('hidden');
-  }
-
-  function switchTab(tab) {
-    editorTab = tab;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === tab));
-    document.getElementById('panel-edit').classList.toggle('hidden', tab !== 'edit');
-    document.getElementById('panel-video').classList.toggle('hidden', tab !== 'video');
-    if (tab === 'video') {
-      // Sync latest edited frame to video source
-      document.getElementById('video-source-img').src = Editor.getDataURL();
+    if (data.status === 'succeeded') {
+      return Array.isArray(data.output) ? data.output[0] : data.output;
     }
+    if (data.status === 'failed') throw new Error(data.error || 'Generation failed');
   }
+  throw new Error('Timed out — try again');
+}
 
-  /* ─── Video Generation ─── */
-  async function startGenerate() {
-    if (isGenerating) return;
-    const prompt = document.getElementById('video-prompt').value.trim();
-    if (!prompt) { toast('Enter a motion prompt first.', 'error'); return; }
+function getMotionHint() {
+  return '';
+}
 
-    const imageData = Editor.getDataURL('image/jpeg', 0.92);
-    const btn = document.getElementById('btn-generate');
-    const progressWrap = document.getElementById('video-progress');
-    const progressFill = document.getElementById('progress-fill');
-    const progressStatus = document.getElementById('progress-status');
-
-    isGenerating = true;
-    btn.disabled = true;
-    progressWrap.classList.remove('hidden');
-    document.getElementById('video-result-wrap').classList.add('hidden');
-
-    let fakeProgress = 0;
-    progressTimer = setInterval(() => {
-      fakeProgress = Math.min(fakeProgress + 1.2, 88);
-      progressFill.style.width = fakeProgress + '%';
-      if (fakeProgress < 30) progressStatus.textContent = 'Uploading photo…';
-      else if (fakeProgress < 60) progressStatus.textContent = 'Generating frames…';
-      else progressStatus.textContent = 'Finalizing video…';
-    }, 1000);
-
-    try {
-      const videoUrl = await VideoGen.generate(imageData, prompt);
-      clearInterval(progressTimer);
-      progressFill.style.width = '100%';
-      progressStatus.textContent = 'Done!';
-      await new Promise(r => setTimeout(r, 600));
-      progressWrap.classList.add('hidden');
-
-      const videoEl = document.getElementById('video-result');
-      videoEl.src = videoUrl;
-      document.getElementById('video-result-wrap').classList.remove('hidden');
-      toast('Video generated successfully!', 'success');
-    } catch (err) {
-      clearInterval(progressTimer);
-      progressWrap.classList.add('hidden');
-      toast(err.message || 'Generation failed', 'error');
-    } finally {
-      isGenerating = false;
-      btn.disabled = false;
-      progressFill.style.width = '0%';
-    }
+/* ─── Loading states ─── */
+let editProgressTimer = null;
+function setEditLoading(on) {
+  const btn  = document.getElementById('btn-edit');
+  const wrap = document.getElementById('edit-progress');
+  const fill = document.getElementById('edit-progress-fill');
+  const text = document.getElementById('edit-progress-text');
+  btn.disabled = on;
+  if (on) {
+    wrap.classList.remove('hidden');
+    fill.style.width = '0%';
+    let p = 0;
+    editProgressTimer = setInterval(() => {
+      p = Math.min(p + 0.8, 85);
+      fill.style.width = p + '%';
+      if (p < 20) text.textContent = 'Sending photo to AI…';
+      else if (p < 50) text.textContent = 'Applying edits…';
+      else if (p < 80) text.textContent = 'Finishing up…';
+    }, 800);
+  } else {
+    clearInterval(editProgressTimer);
+    fill.style.width = '100%';
+    setTimeout(() => wrap.classList.add('hidden'), 500);
   }
+}
 
-  /* ─── Settings Modal ─── */
-  function wireSettings() {
-    document.getElementById('btn-settings').addEventListener('click', openSettings);
-    document.getElementById('btn-close-settings').addEventListener('click', closeSettings);
-    document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
-    document.getElementById('modal-settings').addEventListener('click', e => {
-      if (e.target === e.currentTarget) closeSettings();
-    });
+function updateEditProgress(pct, label) {
+  document.getElementById('edit-progress-fill').style.width = pct + '%';
+  if (label) document.getElementById('edit-progress-text').textContent = label;
+}
+
+let videoProgressTimer = null;
+function setVideoLoading(on) {
+  const btn  = document.getElementById('btn-generate');
+  const wrap = document.getElementById('video-progress');
+  const fill = document.getElementById('video-progress-fill');
+  const text = document.getElementById('video-progress-text');
+  btn.disabled = on;
+  if (on) {
+    wrap.classList.remove('hidden');
+    fill.style.width = '0%';
+    let p = 0;
+    videoProgressTimer = setInterval(() => {
+      p = Math.min(p + 0.5, 80);
+      fill.style.width = p + '%';
+      if (p < 15) text.textContent = 'Starting generation…';
+      else if (p < 40) text.textContent = 'Generating frames…';
+      else if (p < 70) text.textContent = 'Encoding video…';
+      else text.textContent = 'Almost done…';
+    }, 1200);
+  } else {
+    clearInterval(videoProgressTimer);
+    fill.style.width = '100%';
+    setTimeout(() => wrap.classList.add('hidden'), 500);
   }
+}
 
-  function openSettings() {
-    document.getElementById('key-runway').value   = VideoGen.getApiKey('runway');
-    document.getElementById('key-replicate').value = VideoGen.getApiKey('replicate');
-    document.getElementById('modal-settings').classList.remove('hidden');
-  }
+function updateVideoProgress(pct) {
+  document.getElementById('video-progress-fill').style.width = pct + '%';
+}
 
-  function closeSettings() {
-    document.getElementById('modal-settings').classList.add('hidden');
-  }
-
-  function saveSettings() {
-    VideoGen.saveApiKey('runway',    document.getElementById('key-runway').value.trim());
-    VideoGen.saveApiKey('replicate', document.getElementById('key-replicate').value.trim());
-    closeSettings();
+/* ─── Settings ─── */
+function wireSettings() {
+  document.getElementById('btn-settings').addEventListener('click', openModal);
+  document.getElementById('btn-close-modal').addEventListener('click', closeModal);
+  document.getElementById('modal-settings').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  document.getElementById('btn-save-settings').addEventListener('click', () => {
+    saveKey('replicate', document.getElementById('key-replicate').value.trim());
+    saveKey('runway',    document.getElementById('key-runway').value.trim());
+    state.videoProvider = document.getElementById('video-provider').value;
+    localStorage.setItem('ff_provider', state.videoProvider);
+    closeModal();
     toast('Settings saved', 'success');
-  }
+  });
+}
 
-  /* ─── Persistence ─── */
-  function savePhotosToStorage() {
-    try {
-      // Only store up to 30 photos to avoid storage limits
-      const toSave = photos.slice(-30).map(p => ({ id: p.id, name: p.name, src: p.src }));
-      localStorage.setItem('ff_photos', JSON.stringify(toSave));
-    } catch {}
-  }
+function openModal() {
+  document.getElementById('key-replicate').value = getKey('replicate');
+  document.getElementById('key-runway').value    = getKey('runway');
+  document.getElementById('video-provider').value = state.videoProvider;
+  document.getElementById('modal-settings').classList.remove('hidden');
+}
 
-  function loadPhotosFromStorage() {
-    try {
-      const raw = localStorage.getItem('ff_photos');
-      if (raw) photos = JSON.parse(raw);
-    } catch {}
-  }
+function closeModal() {
+  document.getElementById('modal-settings').classList.add('hidden');
+}
 
-  /* ─── Toast ─── */
-  function toast(msg, type = '') {
-    const el = document.createElement('div');
-    el.className = `toast ${type}`;
-    el.textContent = msg;
-    document.body.appendChild(el);
-    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
-    setTimeout(() => {
-      el.classList.remove('show');
-      setTimeout(() => el.remove(), 400);
-    }, 3000);
-  }
+function loadSettings() {
+  state.videoProvider = localStorage.getItem('ff_provider') || 'runway';
+}
 
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+function getKey(name) { return localStorage.getItem(`ff_key_${name}`) || ''; }
+function saveKey(name, val) { localStorage.setItem(`ff_key_${name}`, val); }
 
-  document.addEventListener('DOMContentLoaded', init);
-})();
+/* ─── Helpers ─── */
+function resizeImage(dataURL, maxSize, cb) {
+  const img = new Image();
+  img.onload = () => {
+    let w = img.width, h = img.height;
+    if (w > maxSize || h > maxSize) {
+      if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+      else       { w = Math.round(w * maxSize / h); h = maxSize; }
+    }
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    c.getContext('2d').drawImage(img, 0, 0, w, h);
+    cb(c.toDataURL('image/jpeg', 0.88));
+  };
+  img.src = dataURL;
+}
+
+function downloadDataURL(url, filename) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+let toastTimer = null;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type}`;
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}

@@ -2,197 +2,205 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FrameForge — Photo &amp; Video Editor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>FrameForge</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Header -->
-  <header id="app-header">
-    <div class="header-left">
-      <button id="btn-back" class="icon-btn hidden" title="Back to Gallery">
-        <svg viewBox="0 0 24 24"><path d="M19 11H7.83l4.88-4.88c.39-.39.39-1.03 0-1.42-.39-.39-1.02-.39-1.41 0l-6.59 6.59c-.39.39-.39 1.02 0 1.41l6.59 6.59c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L7.83 13H19c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>
-      </button>
-      <span class="logo">FrameForge</span>
-    </div>
-    <nav id="view-tabs" class="hidden">
-      <button class="tab-btn active" data-view="edit">Edit Photo</button>
-      <button class="tab-btn" data-view="video">Create Video</button>
-    </nav>
-    <div class="header-right">
-      <button id="btn-settings" class="icon-btn" title="API Settings">
-        <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
-      </button>
-    </div>
+
+  <header>
+    <span class="logo">FrameForge</span>
+    <button id="btn-settings" class="icon-btn" title="Settings">
+      <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+    </button>
   </header>
 
-  <!-- Gallery View -->
-  <div id="view-gallery" class="view active">
-    <div class="gallery-toolbar">
-      <h2>My Gallery</h2>
-      <label class="upload-btn" for="file-input">
-        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-        Add Photos
-        <input type="file" id="file-input" accept="image/*" multiple />
-      </label>
-    </div>
-    <div id="gallery-empty" class="empty-state">
-      <div class="empty-icon">
-        <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-      </div>
-      <p>No photos yet. Click <strong>Add Photos</strong> to get started.</p>
-    </div>
-    <div id="gallery-grid" class="gallery-grid"></div>
-  </div>
+  <main>
 
-  <!-- Editor View -->
-  <div id="view-editor" class="view hidden">
-    <!-- Edit Photo Tab -->
-    <div id="panel-edit" class="editor-layout">
-      <div class="canvas-area">
-        <div class="canvas-wrapper">
-          <canvas id="main-canvas"></canvas>
-        </div>
-        <div class="canvas-actions">
-          <button id="btn-reset" class="ghost-btn">Reset</button>
-          <button id="btn-download-photo" class="primary-btn">Download Photo</button>
+    <!-- ═══════════════ SECTION 1: EDIT PHOTO ═══════════════ -->
+    <section class="card" id="section-edit">
+      <div class="section-heading">
+        <span class="section-num">01</span>
+        <div>
+          <h2>Edit Photo</h2>
+          <p class="section-sub">Change outfits, hair, backgrounds &amp; more with AI</p>
         </div>
       </div>
-      <aside class="tools-panel">
-        <section class="tool-section">
-          <h3>Adjustments</h3>
-          <label>Brightness <span id="val-brightness">0</span></label>
-          <input type="range" id="sl-brightness" min="-100" max="100" value="0" />
-          <label>Contrast <span id="val-contrast">0</span></label>
-          <input type="range" id="sl-contrast" min="-100" max="100" value="0" />
-          <label>Saturation <span id="val-saturation">0</span></label>
-          <input type="range" id="sl-saturation" min="-100" max="100" value="0" />
-          <label>Sharpness <span id="val-sharpness">0</span></label>
-          <input type="range" id="sl-sharpness" min="0" max="10" value="0" />
-        </section>
-        <section class="tool-section">
-          <h3>Transform</h3>
-          <div class="btn-row">
-            <button class="tool-btn" id="btn-rot-left" title="Rotate Left">
-              <svg viewBox="0 0 24 24"><path d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.62 3.89l1.41-1.42c-.52-.75-.87-1.59-1.01-2.47zm1.01 5.32c1.16.9 2.51 1.44 3.9 1.61V17.9c-.87-.15-1.71-.49-2.46-1.03L7.1 18.32zM13 4.07V1L8.45 5.55 13 10V6.09c2.84.48 5 2.94 5 5.91s-2.16 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93s-3.05-7.44-7-7.93z"/></svg>
-            </button>
-            <button class="tool-btn" id="btn-rot-right" title="Rotate Right">
-              <svg viewBox="0 0 24 24"><path d="M15.55 5.55L11 1v3.07C7.06 4.56 4 7.92 4 12s3.05 7.44 7 7.93v-2.02c-2.84-.48-5-2.94-5-5.91s2.16-5.43 5-5.91V10l4.55-4.45zM19.93 11c-.17-1.39-.72-2.73-1.62-3.89l-1.42 1.42c.54.75.88 1.6 1.02 2.47h2.02zM13 17.9v2.02c1.39-.17 2.74-.71 3.9-1.61l-1.44-1.44c-.75.54-1.59.89-2.46 1.03zm3.89-2.42l1.42 1.41c.9-1.16 1.45-2.5 1.62-3.89h-2.02c-.14.87-.48 1.72-1.02 2.48z"/></svg>
-            </button>
-            <button class="tool-btn" id="btn-flip-h" title="Flip Horizontal">
-              <svg viewBox="0 0 24 24"><path d="M15 21h2v-2h-2v2zm4-12h2V7h-2v2zM3 5v14c0 1.1.9 2 2 2h4v-2H5V5h4V3H5c-1.1 0-2 .9-2 2zm16-2v2h2c0-1.1-.9-2-2-2zm-8 20h2V1h-2v22zm8-6h2v-2h-2v2zM15 5h2V3h-2v2zm4 8h2v-2h-2v2zm0 8c1.1 0 2-.9 2-2h-2v2z"/></svg>
-            </button>
-            <button class="tool-btn" id="btn-flip-v" title="Flip Vertical">
-              <svg viewBox="0 0 24 24"><path d="M21 15v2h2v-2h-2zM9 3H7v2h2V3zM3 19h14c1.1 0 2-.9 2-2v-4H3v6zm2-4h10v2H5v-2zM21 7h-2v2h2V7zM9 19h2v2H9v-2zm8 0v2h2c0-1.1-.9-2-2-2zM1 9h22V7H1v2zm2-6C1.9 3 1 3.9 1 5h2V3zm0 8H1v2h2v-2zm18-8v2h2c0-1.1-.9-2-2-2zm0 12h2v-2h-2v2z"/></svg>
-            </button>
-          </div>
-        </section>
-        <section class="tool-section">
-          <h3>Filters</h3>
-          <div id="filter-list" class="filter-grid"></div>
-        </section>
-        <section class="tool-section">
-          <h3>Crop</h3>
-          <div class="btn-row">
-            <button class="tool-btn active-tool" id="btn-crop-free" data-ratio="free">Free</button>
-            <button class="tool-btn" id="btn-crop-1-1" data-ratio="1:1">1:1</button>
-            <button class="tool-btn" id="btn-crop-16-9" data-ratio="16:9">16:9</button>
-            <button class="tool-btn" id="btn-crop-4-3" data-ratio="4:3">4:3</button>
-          </div>
-          <button id="btn-apply-crop" class="primary-btn mt-8 w-full">Apply Crop</button>
-        </section>
-      </aside>
+
+      <!-- Upload box -->
+      <div class="upload-box" id="edit-upload-box">
+        <input type="file" id="edit-file" accept="image/*" class="file-input" />
+        <div class="upload-placeholder" id="edit-placeholder">
+          <svg class="upload-svg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          <p class="upload-label">Add Photo</p>
+          <p class="upload-hint">Tap to take a photo or choose from gallery</p>
+        </div>
+        <img id="edit-preview" class="preview-img hidden" alt="Your photo" />
+        <button id="edit-swap-btn" class="swap-btn hidden">Change Photo</button>
+      </div>
+
+      <!-- Suggestion chips -->
+      <div class="chip-row" id="edit-chips">
+        <button class="chip" data-insert="Change the outfit to ">Change Outfit</button>
+        <button class="chip" data-insert="Change the hair color to ">Hair Color</button>
+        <button class="chip" data-insert="Change the hairstyle to ">Hair Style</button>
+        <button class="chip" data-insert="Replace the background with ">Background</button>
+        <button class="chip" data-insert="Remove the person on the left from the photo">Remove Person</button>
+        <button class="chip" data-insert="Add a person to the scene who is ">Add Person</button>
+        <button class="chip" data-insert="Change the clothing style to ">Change Style</button>
+        <button class="chip" data-insert="Change the setting to a ">Change Setting</button>
+      </div>
+
+      <!-- Prompt -->
+      <div class="field-wrap">
+        <label class="field-label">What would you like to change?</label>
+        <textarea id="edit-prompt" rows="4" placeholder="Examples:&#10;• Change the outfit to a red evening dress&#10;• Change the hair color to platinum blonde&#10;• Replace the background with a sunset beach&#10;• Remove the person on the left"></textarea>
+      </div>
+
+      <button id="btn-edit" class="action-btn" disabled>
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+        Apply AI Edit
+      </button>
+
+      <div id="edit-progress" class="progress-wrap hidden">
+        <div class="progress-track"><div id="edit-progress-fill" class="progress-fill"></div></div>
+        <p id="edit-progress-text">Processing your photo…</p>
+      </div>
+
+      <!-- Result -->
+      <div id="edit-result-wrap" class="result-wrap hidden">
+        <div class="result-label">
+          <span>Edited Photo</span>
+          <button id="btn-save-edit" class="save-link">Save</button>
+        </div>
+        <img id="edit-result-img" class="result-img" alt="Edited photo" />
+        <button id="btn-use-for-video" class="secondary-btn">Use this photo for video →</button>
+      </div>
+    </section>
+
+    <div class="divider">
+      <span>— or —</span>
     </div>
 
-    <!-- Create Video Tab -->
-    <div id="panel-video" class="video-layout hidden">
-      <div class="video-left">
-        <div class="source-preview">
-          <h3>Source Photo</h3>
-          <img id="video-source-img" src="" alt="Source" />
-        </div>
-        <div id="video-result-wrap" class="video-result hidden">
-          <h3>Generated Video</h3>
-          <video id="video-result" controls playsinline></video>
-          <button id="btn-download-video" class="primary-btn w-full mt-8">Download Video</button>
+    <!-- ═══════════════ SECTION 2: CREATE VIDEO ═══════════════ -->
+    <section class="card" id="section-video">
+      <div class="section-heading">
+        <span class="section-num">02</span>
+        <div>
+          <h2>Create Video</h2>
+          <p class="section-sub">Turn a photo into a cinematic AI video clip</p>
         </div>
       </div>
-      <div class="video-right">
-        <div class="tool-section">
-          <h3>Motion Prompt</h3>
-          <textarea id="video-prompt" placeholder="Describe the motion and style...&#10;&#10;Examples:&#10;• Slowly zoom into the center with cinematic bokeh&#10;• Camera pans left across the scene, golden hour lighting&#10;• Gentle waves ripple through the image, dreamy atmosphere&#10;• Time-lapse clouds drift overhead"></textarea>
+
+      <!-- Upload box -->
+      <div class="upload-box" id="video-upload-box">
+        <input type="file" id="video-file" accept="image/*" class="file-input" />
+        <div class="upload-placeholder" id="video-placeholder">
+          <svg class="upload-svg" viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+          <p class="upload-label">Add Photo</p>
+          <p class="upload-hint">Tap to take a photo or choose from gallery</p>
         </div>
-        <div class="tool-section">
-          <h3>Settings</h3>
-          <label>Duration</label>
-          <div class="btn-row mb-12">
-            <button class="tool-btn active-tool" data-duration="5">5s</button>
-            <button class="tool-btn" data-duration="10">10s</button>
-          </div>
-          <label>Motion Intensity</label>
-          <div class="btn-row mb-12">
-            <button class="tool-btn active-tool" data-motion="subtle">Subtle</button>
-            <button class="tool-btn" data-motion="moderate">Moderate</button>
-            <button class="tool-btn" data-motion="dynamic">Dynamic</button>
-          </div>
-          <label>Aspect Ratio</label>
-          <div class="btn-row mb-12">
-            <button class="tool-btn active-tool" data-ratio-v="1280:768">16:9</button>
-            <button class="tool-btn" data-ratio-v="768:1280">9:16</button>
-            <button class="tool-btn" data-ratio-v="1104:832">4:3</button>
-            <button class="tool-btn" data-ratio-v="832:832">1:1</button>
-          </div>
-        </div>
-        <div class="tool-section">
-          <h3>AI Provider</h3>
-          <select id="video-provider">
-            <option value="runway">Runway ML (Gen-3 Alpha)</option>
-            <option value="replicate">Replicate (Stable Video)</option>
-          </select>
-          <div id="provider-info" class="provider-note"></div>
-        </div>
-        <div id="video-progress" class="video-progress hidden">
-          <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
-          <p id="progress-status">Generating video…</p>
-        </div>
-        <button id="btn-generate" class="generate-btn">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-          Generate Video
-        </button>
+        <img id="video-preview" class="preview-img hidden" alt="Source photo" />
+        <button id="video-swap-btn" class="swap-btn hidden">Change Photo</button>
       </div>
-    </div>
-  </div>
+
+      <!-- Suggestion chips -->
+      <div class="chip-row" id="video-chips">
+        <button class="chip" data-insert="Slowly zoom into the subject with smooth cinematic motion">Zoom In</button>
+        <button class="chip" data-insert="Camera pans slowly from left to right across the scene">Pan Shot</button>
+        <button class="chip" data-insert="Cinematic dolly push-in with shallow depth of field and beautiful bokeh">Cinematic</button>
+        <button class="chip" data-insert="Time-lapse effect with drifting clouds and shifting golden hour light">Time-lapse</button>
+        <button class="chip" data-insert="Dreamy ethereal atmosphere with soft bokeh and gentle floating motion">Dreamy</button>
+        <button class="chip" data-insert="Dramatic slow reveal with atmospheric fog and moody lighting">Dramatic</button>
+        <button class="chip" data-insert="Aerial drone shot slowly pulling back to reveal the landscape">Drone Pull-back</button>
+        <button class="chip" data-insert="Hypnotic loop with subtle breathing motion and glowing highlights">Hypnotic Loop</button>
+      </div>
+
+      <!-- Prompt -->
+      <div class="field-wrap">
+        <label class="field-label">Describe the motion &amp; mood</label>
+        <textarea id="video-prompt" rows="4" placeholder="Examples:&#10;• Slowly zoom into the subject with smooth camera motion&#10;• Camera pans left to right, golden hour lighting&#10;• Cinematic dolly shot with bokeh depth of field&#10;• Dreamy atmosphere with gentle floating motion"></textarea>
+      </div>
+
+      <!-- Video settings -->
+      <div class="settings-row">
+        <div class="setting-group">
+          <label class="field-label">Duration</label>
+          <div class="seg-control">
+            <button class="seg-btn active" data-duration="5">5 sec</button>
+            <button class="seg-btn" data-duration="10">10 sec</button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <label class="field-label">Aspect Ratio</label>
+          <div class="seg-control">
+            <button class="seg-btn active" data-vratio="1280:768">16:9</button>
+            <button class="seg-btn" data-vratio="768:1280">9:16</button>
+            <button class="seg-btn" data-vratio="832:832">1:1</button>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-generate" class="action-btn action-btn-video" disabled>
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        Generate Video
+      </button>
+
+      <div id="video-progress" class="progress-wrap hidden">
+        <div class="progress-track"><div id="video-progress-fill" class="progress-fill"></div></div>
+        <p id="video-progress-text">Starting generation…</p>
+      </div>
+
+      <!-- Result -->
+      <div id="video-result-wrap" class="result-wrap hidden">
+        <div class="result-label">
+          <span>Generated Video</span>
+          <button id="btn-save-video" class="save-link">Save</button>
+        </div>
+        <video id="video-result" class="result-video" controls playsinline loop></video>
+      </div>
+    </section>
+
+  </main>
 
   <!-- Settings Modal -->
   <div id="modal-settings" class="modal hidden">
     <div class="modal-box">
       <div class="modal-header">
         <h2>API Settings</h2>
-        <button id="btn-close-settings" class="icon-btn">
+        <button id="btn-close-modal" class="icon-btn">
           <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
       </div>
       <div class="modal-body">
-        <div class="setting-group">
-          <label>Runway ML API Key</label>
-          <input type="password" id="key-runway" placeholder="rw-…" autocomplete="off" />
-          <p class="hint">Get your key at <strong>app.runwayml.com</strong> → Account → API Keys</p>
+        <div class="info-box">
+          Both sections use AI APIs. Sign up free at the links below to get your keys.
         </div>
-        <div class="setting-group">
-          <label>Replicate API Token</label>
+        <div class="field-group">
+          <label>Replicate API Token <span class="badge">Photo editing + Video</span></label>
           <input type="password" id="key-replicate" placeholder="r8_…" autocomplete="off" />
-          <p class="hint">Get your token at <strong>replicate.com/account/api-tokens</strong></p>
+          <p class="field-hint">replicate.com → Account → API Tokens</p>
         </div>
-        <p class="hint-box">API keys are stored only in your browser's local storage and never sent anywhere except directly to the provider's API.</p>
+        <div class="field-group">
+          <label>Runway ML API Key <span class="badge badge-alt">Video only</span></label>
+          <input type="password" id="key-runway" placeholder="rw-…" autocomplete="off" />
+          <p class="field-hint">app.runwayml.com → Account → API Keys</p>
+        </div>
+        <div class="field-group">
+          <label>Video Provider</label>
+          <select id="video-provider">
+            <option value="runway">Runway ML (higher quality)</option>
+            <option value="replicate">Replicate (same key as photo edit)</option>
+          </select>
+        </div>
+        <p class="privacy-note">Keys are saved in your browser only — never sent to any server other than the AI provider.</p>
       </div>
-      <div class="modal-footer">
-        <button id="btn-save-settings" class="primary-btn">Save Settings</button>
-      </div>
+      <button id="btn-save-settings" class="action-btn">Save Settings</button>
     </div>
   </div>
 
-  <script src="js/editor.js"></script>
-  <script src="js/video.js"></script>
+  <div id="toast" class="toast"></div>
+
   <script src="js/app.js"></script>
 </body>
 </html>
