@@ -1,7 +1,7 @@
 /* ─── State ─── */
 const state = {
-  editImageData: null,   // base64 data URL of selected photo for editing
-  videoImageData: null,  // base64 data URL of selected photo for video
+  editImageData: null,
+  videoImageData: null,
   videoDuration: 5,
   videoRatio: '1280:768',
   videoProvider: 'runway',
@@ -31,8 +31,7 @@ function wireUpload(section) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      const dataURL = ev.target.result;
-      resizeImage(dataURL, 1024, compressed => {
+      resizeImage(ev.target.result, 512, compressed => {
         if (section === 'edit') state.editImageData = compressed;
         else state.videoImageData = compressed;
         preview.src = compressed;
@@ -47,14 +46,10 @@ function wireUpload(section) {
     e.target.value = '';
   });
 
-  // Clicking swap re-triggers file input
-  swapBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    fileInput.click();
-  });
+  swapBtn.addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
 }
 
-/* ─── Chips — insert prompt text ─── */
+/* ─── Chips ─── */
 function wireChips() {
   document.querySelectorAll('#section-edit .chip').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -73,7 +68,7 @@ function wireChips() {
   });
 }
 
-/* ─── Segmented controls (duration + ratio) ─── */
+/* ─── Segmented controls ─── */
 function wireSegControls() {
   document.querySelectorAll('[data-duration]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -93,11 +88,8 @@ function wireSegControls() {
 
 /* ─── Enable/disable action buttons ─── */
 function updateActionBtn(section) {
-  if (section === 'edit') {
-    document.getElementById('btn-edit').disabled = !state.editImageData;
-  } else {
-    document.getElementById('btn-generate').disabled = !state.videoImageData;
-  }
+  if (section === 'edit') document.getElementById('btn-edit').disabled = !state.editImageData;
+  else document.getElementById('btn-generate').disabled = !state.videoImageData;
 }
 
 /* ─── Action buttons ─── */
@@ -108,24 +100,22 @@ function wireActionButtons() {
   document.getElementById('btn-save-edit').addEventListener('click', () => {
     const img = document.getElementById('edit-result-img');
     if (!img.src) return;
-    downloadDataURL(img.src, 'frameforge-edit.jpg');
+    downloadURL(img.src, 'frameforge-edit.jpg');
   });
 
   document.getElementById('btn-save-video').addEventListener('click', () => {
-    const video = document.getElementById('video-result');
-    if (!video.src) return;
-    const a = document.createElement('a');
-    a.href = video.src;
-    a.download = 'frameforge-video.mp4';
-    a.click();
+    const v = document.getElementById('video-result');
+    if (!v.src) return;
+    downloadURL(v.src, 'frameforge-video.mp4');
   });
 
   document.getElementById('btn-use-for-video').addEventListener('click', () => {
-    const resultImg = document.getElementById('edit-result-img');
-    if (!resultImg.src) return;
-    state.videoImageData = resultImg.src;
-    document.getElementById('video-preview').src = resultImg.src;
-    document.getElementById('video-preview').classList.remove('hidden');
+    const src = document.getElementById('edit-result-img').src;
+    if (!src) return;
+    state.videoImageData = src;
+    const vp = document.getElementById('video-preview');
+    vp.src = src;
+    vp.classList.remove('hidden');
     document.getElementById('video-placeholder').classList.add('hidden');
     document.getElementById('video-swap-btn').classList.remove('hidden');
     document.getElementById('video-upload-box').classList.add('has-image');
@@ -135,261 +125,160 @@ function wireActionButtons() {
   });
 }
 
-/* ─── Photo Editing via Replicate InstructPix2Pix ─── */
+/* ─── Photo Edit ─── */
 async function handleEdit() {
   const prompt = document.getElementById('edit-prompt').value.trim();
   if (!prompt) { toast('Describe what you want to change first', 'error'); return; }
   if (!state.editImageData) { toast('Add a photo first', 'error'); return; }
-
   const apiKey = getKey('replicate');
   if (!apiKey) { toast('Add your Replicate API key in Settings ⚙️', 'error'); return; }
 
-  setEditLoading(true);
-
+  setLoading('edit', true);
   try {
-    const resultUrl = await editPhotoWithAI(state.editImageData, prompt, apiKey);
-    document.getElementById('edit-result-img').src = resultUrl;
+    // Step 1 — create prediction via server-side proxy
+    const startRes = await apiCall('/api/edit', { image: state.editImageData, prompt, apiKey });
+    if (startRes.error) throw new Error(startRes.error);
+    if (!startRes.id) throw new Error('No prediction ID — check your API key');
+
+    // Step 2 — poll until done
+    const output = await pollUntilDone(startRes.id, apiKey, 'replicate', 'edit');
+    const imageUrl = Array.isArray(output) ? output[0] : output;
+    if (!imageUrl) throw new Error('No output image returned');
+
+    document.getElementById('edit-result-img').src = imageUrl;
     document.getElementById('edit-result-wrap').classList.remove('hidden');
     toast('Edit applied!', 'success');
   } catch (err) {
-    toast(err.message || 'Edit failed — check your API key', 'error');
+    toast(err.message || 'Edit failed', 'error');
   } finally {
-    setEditLoading(false);
+    setLoading('edit', false);
   }
-}
-
-async function editPhotoWithAI(imageDataURL, prompt, apiKey) {
-  // Resize to 512px — optimal size for InstructPix2Pix
-  const resized = await resizeImageAsync(imageDataURL, 512);
-
-  let response;
-  try {
-    response = await fetch('https://api.replicate.com/v1/models/timothybrooks/instruct-pix2pix/predictions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Token ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        input: {
-          image: resized,
-          prompt: prompt,
-          num_inference_steps: 100,
-          image_guidance_scale: 1.5,
-          guidance_scale: 7.5,
-          num_outputs: 1,
-        },
-      }),
-    });
-  } catch (networkErr) {
-    throw new Error('Network error — check your internet connection and that the API key is correct');
-  }
-
-  if (!response.ok) {
-    let msg = `API error ${response.status}`;
-    try {
-      const err = await response.json();
-      msg = err.detail || err.message || msg;
-    } catch {}
-    throw new Error(msg);
-  }
-
-  const data = await response.json();
-  if (!data.id) throw new Error('No prediction ID returned from Replicate');
-  return pollPrediction(data.id, apiKey, 'edit');
 }
 
 /* ─── Video Generation ─── */
 async function handleVideo() {
   const prompt = document.getElementById('video-prompt').value.trim();
-  if (!prompt) { toast('Describe the motion and mood first', 'error'); return; }
+  if (!prompt) { toast('Describe the motion first', 'error'); return; }
   if (!state.videoImageData) { toast('Add a photo first', 'error'); return; }
-
   const provider = state.videoProvider;
-  const apiKey   = getKey(provider === 'runway' ? 'runway' : 'replicate');
+  const apiKey = getKey(provider === 'runway' ? 'runway' : 'replicate');
   if (!apiKey) {
     toast(`Add your ${provider === 'runway' ? 'Runway ML' : 'Replicate'} API key in Settings ⚙️`, 'error');
     return;
   }
 
-  setVideoLoading(true);
-
+  setLoading('video', true);
   try {
-    let videoUrl;
-    if (provider === 'runway') {
-      videoUrl = await generateRunway(state.videoImageData, prompt, apiKey);
-    } else {
-      videoUrl = await generateReplicateVideo(state.videoImageData, prompt, apiKey);
-    }
+    // Step 1 — start generation via proxy
+    const startRes = await apiCall('/api/video', {
+      image: state.videoImageData, prompt, apiKey, provider,
+      duration: state.videoDuration, ratio: state.videoRatio,
+    });
+    if (startRes.error) throw new Error(startRes.error);
+
+    // Runway returns { id } at top level; Replicate also returns { id }
+    const taskId = startRes.id;
+    if (!taskId) throw new Error('No task ID returned — check your API key');
+
+    // Step 2 — poll
+    const output = await pollUntilDone(taskId, apiKey, provider, 'video');
+    const videoUrl = Array.isArray(output) ? output[0] : output;
+    if (!videoUrl) throw new Error('No output video returned');
+
     const videoEl = document.getElementById('video-result');
     videoEl.src = videoUrl;
     document.getElementById('video-result-wrap').classList.remove('hidden');
     toast('Video ready!', 'success');
   } catch (err) {
-    toast(err.message || 'Generation failed — check your API key', 'error');
+    toast(err.message || 'Generation failed', 'error');
   } finally {
-    setVideoLoading(false);
+    setLoading('video', false);
   }
 }
 
-async function generateRunway(imageDataURL, prompt, apiKey) {
-  const motionHint = getMotionHint();
-  const fullPrompt = [prompt, motionHint].filter(Boolean).join(', ');
+/* ─── Shared poll loop (calls /api/poll proxy) ─── */
+async function pollUntilDone(id, apiKey, provider, section) {
+  const STATUSES_DONE    = ['succeeded', 'SUCCEEDED'];
+  const STATUSES_FAILED  = ['failed', 'FAILED', 'canceled', 'CANCELED'];
 
-  const res = await fetch('https://api.dev.runwayml.com/v1/image_to_video', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'X-Runway-Version': '2024-11-06',
-    },
-    body: JSON.stringify({
-      promptImage: imageDataURL,
-      promptText: fullPrompt,
-      model: 'gen3a_turbo',
-      duration: state.videoDuration,
-      ratio: state.videoRatio,
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || `Runway error ${res.status}`);
-  }
-
-  const { id } = await res.json();
-  return pollRunway(id, apiKey);
-}
-
-async function pollRunway(taskId, apiKey) {
-  for (let i = 0; i < 120; i++) {
+  for (let attempt = 0; attempt < 120; attempt++) {
     await delay(3000);
-    const res = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'X-Runway-Version': '2024-11-06' },
-    });
-    if (!res.ok) continue;
-    const data = await res.json();
-    updateVideoProgress(Math.min(i / 40 * 90, 88));
-    if (data.status === 'SUCCEEDED') return data.output?.[0];
-    if (data.status === 'FAILED') throw new Error(data.failure || 'Runway generation failed');
-  }
-  throw new Error('Timed out — try again');
-}
+    const data = await apiCall('/api/poll', { id, apiKey, provider });
 
-async function generateReplicateVideo(imageDataURL, prompt, apiKey) {
-  const motionBucket = 100;
-  const res = await fetch('https://api.replicate.com/v1/models/stability-ai/stable-video-diffusion/predictions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Token ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      input: {
-        input_image: imageDataURL,
-        frames_per_second: 6,
-        num_frames: state.videoDuration * 6,
-        motion_bucket_id: motionBucket,
-        cond_aug: 0.02,
-        decoding_t: 7,
-        output_format: 'mp4',
-      },
-    }),
-  });
+    const pct = Math.min((attempt / 50) * 90, 88);
+    updateProgress(section, pct, data);
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Replicate error ${res.status}`);
-  }
+    if (data.error) throw new Error(data.error);
 
-  const { id } = await res.json();
-  return pollPrediction(id, apiKey, 'video');
-}
-
-async function pollPrediction(id, apiKey, section) {
-  for (let i = 0; i < 120; i++) {
-    await delay(3000);
-    const res = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
-      headers: { 'Authorization': `Token ${apiKey}` },
-    });
-    if (!res.ok) continue;
-    const data = await res.json();
-
-    const pct = Math.min(i / 40 * 90, 88);
-    if (section === 'edit') updateEditProgress(pct, data.logs?.split('\n').pop() || 'Processing…');
-    else updateVideoProgress(pct);
-
-    if (data.status === 'succeeded') {
-      return Array.isArray(data.output) ? data.output[0] : data.output;
+    const status = data.status;
+    if (STATUSES_DONE.includes(status)) {
+      // Runway output is in data.output[]; Replicate in data.output
+      return data.output;
     }
-    if (data.status === 'failed') throw new Error(data.error || 'Generation failed');
+    if (STATUSES_FAILED.includes(status)) {
+      throw new Error(data.failure || data.error || 'Generation failed');
+    }
   }
-  throw new Error('Timed out — try again');
+  throw new Error('Timed out after 6 minutes — try again');
 }
 
-function getMotionHint() {
-  return '';
+/* ─── Generic API proxy call ─── */
+async function apiCall(path, body) {
+  let res;
+  try {
+    res = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    // fetch itself failed — likely not on Vercel yet (GitHub Pages doesn't have /api)
+    throw new Error('API proxy not available. Deploy to Vercel to enable AI features — see setup instructions below.');
+  }
+
+  if (!res.ok && res.status !== 422) {
+    let msg = `Server error ${res.status}`;
+    try { const e = await res.json(); msg = e.error || e.detail || msg; } catch {}
+    throw new Error(msg);
+  }
+
+  return res.json();
 }
 
 /* ─── Loading states ─── */
-let editProgressTimer = null;
-function setEditLoading(on) {
-  const btn  = document.getElementById('btn-edit');
-  const wrap = document.getElementById('edit-progress');
-  const fill = document.getElementById('edit-progress-fill');
-  const text = document.getElementById('edit-progress-text');
-  btn.disabled = on;
+let loadTimers = {};
+function setLoading(section, on) {
+  const btn  = document.getElementById(section === 'edit' ? 'btn-edit' : 'btn-generate');
+  const wrap = document.getElementById(`${section}-progress`);
+  const fill = document.getElementById(`${section}-progress-fill`);
+  const text = document.getElementById(`${section}-progress-text`);
+
+  btn.disabled = on || !( section === 'edit' ? state.editImageData : state.videoImageData );
+  clearInterval(loadTimers[section]);
+
   if (on) {
     wrap.classList.remove('hidden');
     fill.style.width = '0%';
     let p = 0;
-    editProgressTimer = setInterval(() => {
-      p = Math.min(p + 0.8, 85);
+    loadTimers[section] = setInterval(() => {
+      p = Math.min(p + 0.4, 80);
       fill.style.width = p + '%';
-      if (p < 20) text.textContent = 'Sending photo to AI…';
-      else if (p < 50) text.textContent = 'Applying edits…';
-      else if (p < 80) text.textContent = 'Finishing up…';
-    }, 800);
-  } else {
-    clearInterval(editProgressTimer);
-    fill.style.width = '100%';
-    setTimeout(() => wrap.classList.add('hidden'), 500);
-  }
-}
-
-function updateEditProgress(pct, label) {
-  document.getElementById('edit-progress-fill').style.width = pct + '%';
-  if (label) document.getElementById('edit-progress-text').textContent = label;
-}
-
-let videoProgressTimer = null;
-function setVideoLoading(on) {
-  const btn  = document.getElementById('btn-generate');
-  const wrap = document.getElementById('video-progress');
-  const fill = document.getElementById('video-progress-fill');
-  const text = document.getElementById('video-progress-text');
-  btn.disabled = on;
-  if (on) {
-    wrap.classList.remove('hidden');
-    fill.style.width = '0%';
-    let p = 0;
-    videoProgressTimer = setInterval(() => {
-      p = Math.min(p + 0.5, 80);
-      fill.style.width = p + '%';
-      if (p < 15) text.textContent = 'Starting generation…';
-      else if (p < 40) text.textContent = 'Generating frames…';
-      else if (p < 70) text.textContent = 'Encoding video…';
+      if (p < 20) text.textContent = section === 'edit' ? 'Sending to AI…' : 'Starting generation…';
+      else if (p < 50) text.textContent = section === 'edit' ? 'Applying edits…' : 'Generating frames…';
       else text.textContent = 'Almost done…';
-    }, 1200);
+    }, 1000);
   } else {
-    clearInterval(videoProgressTimer);
     fill.style.width = '100%';
     setTimeout(() => wrap.classList.add('hidden'), 500);
   }
 }
 
-function updateVideoProgress(pct) {
-  document.getElementById('video-progress-fill').style.width = pct + '%';
+function updateProgress(section, pct, data) {
+  const fill = document.getElementById(`${section}-progress-fill`);
+  const text = document.getElementById(`${section}-progress-text`);
+  fill.style.width = pct + '%';
+  const logLine = typeof data.logs === 'string' ? data.logs.trim().split('\n').pop() : null;
+  if (logLine && logLine.length < 80) text.textContent = logLine;
 }
 
 /* ─── Settings ─── */
@@ -410,8 +299,8 @@ function wireSettings() {
 }
 
 function openModal() {
-  document.getElementById('key-replicate').value = getKey('replicate');
-  document.getElementById('key-runway').value    = getKey('runway');
+  document.getElementById('key-replicate').value  = getKey('replicate');
+  document.getElementById('key-runway').value     = getKey('runway');
   document.getElementById('video-provider').value = state.videoProvider;
   document.getElementById('modal-settings').classList.remove('hidden');
 }
@@ -433,8 +322,8 @@ function resizeImage(dataURL, maxSize, cb) {
   img.onload = () => {
     let w = img.width, h = img.height;
     if (w > maxSize || h > maxSize) {
-      if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
-      else       { w = Math.round(w * maxSize / h); h = maxSize; }
+      if (w >= h) { h = Math.round(h * maxSize / w); w = maxSize; }
+      else        { w = Math.round(w * maxSize / h); h = maxSize; }
     }
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
@@ -444,17 +333,10 @@ function resizeImage(dataURL, maxSize, cb) {
   img.src = dataURL;
 }
 
-function resizeImageAsync(dataURL, maxSize) {
-  return new Promise(resolve => resizeImage(dataURL, maxSize, resolve));
-}
-
-function downloadDataURL(url, filename) {
+function downloadURL(url, filename) {
   const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -466,5 +348,5 @@ function toast(msg, type = '') {
   el.className = `toast ${type}`;
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
 }
