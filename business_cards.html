@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Wegen | Pulse — Business Cards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 56px;
+      padding: 60px;
+    }
+
+    .card-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .card-label {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+    }
+
+    /* 3.5" x 2" at ~200dpi = 700 x 400px */
+    .card {
+      width: 700px;
+      height: 400px;
+      background: #0c1222;
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+      padding: 44px 54px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 30px 90px rgba(0,0,0,0.75),
+                  inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(201,168,76,0.05) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    .watermark {
+      position: absolute;
+      right: -24px;
+      bottom: -72px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 300px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.022);
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+    }
+
+    .left-accent {
+      position: absolute;
+      left: 0;
+      top: 14%;
+      width: 2px;
+      height: 72%;
+      background: linear-gradient(180deg,
+        transparent 0%,
+        #c9a84c 25%,
+        #c9a84c 75%,
+        transparent 100%);
+      opacity: 0.45;
+      z-index: 1;
+    }
+
+    .card-top,
+    .card-bottom {
+      position: relative;
+      z-index: 1;
+    }
+
+    .company-name {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.45em;
+      text-transform: uppercase;
+      color: #c9a84c;
+      font-weight: 400;
+      margin-bottom: 16px;
+    }
+
+    .pulse-row {
+      display: flex;
+      align-items: center;
+    }
+
+    .pulse-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 56px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .ekg-wrap {
+      flex: 1;
+      height: 56px;
+      margin-left: 14px;
+      overflow: hidden;
+    }
+
+    .ekg-wrap svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .rule {
+      margin-top: 14px;
+      width: 48px;
+      height: 1px;
+      background: linear-gradient(90deg, #c9a84c 0%, rgba(201,168,76,0) 100%);
+    }
+
+    .person-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 300;
+      color: #fff;
+      letter-spacing: 0.07em;
+      line-height: 1;
+      margin-bottom: 7px;
+    }
+
+    .person-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 9px;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: #c9a84c;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+
+    .contact {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.06em;
+      font-weight: 300;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Timothy Lindeman -->
+  <div class="card-group">
+    <span class="card-label">Timothy Lindeman</span>
+    <div class="card">
+      <div class="left-accent"></div>
+      <div class="watermark">W</div>
+
+      <div class="card-top">
+        <div class="company-name">Wegen</div>
+        <div class="pulse-row">
+          <span class="pulse-text">Pulse</span>
+          <div class="ekg-wrap">
+            <svg viewBox="0 0 380 56" preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="ekg1" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%"   stop-color="#c9a84c" stop-opacity="1"/>
+                  <stop offset="65%"  stop-color="#c9a84c" stop-opacity="1"/>
+                  <stop offset="100%" stop-color="#c9a84c" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,28 L52,28
+                       C56,28 59,18 63,18 C67,18 70,28 74,28
+                       L78,28 L81,32 L84,4 L88,47 L91,28
+                       L107,28
+                       C111,28 114,16 119,14 C124,12 127,20 131,28
+                       L380,28"
+                    stroke="url(#ekg1)" stroke-width="1.8"
+                    fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="rule"></div>
+      </div>
+
+      <div class="card-bottom">
+        <div class="person-name">Timothy Lindeman</div>
+        <div class="person-title">Operations Director</div>
+        <div class="contact">ops@wegen.com</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Elizabeth Rohr -->
+  <div class="card-group">
+    <span class="card-label">Elizabeth Rohr</span>
+    <div class="card">
+      <div class="left-accent"></div>
+      <div class="watermark">W</div>
+
+      <div class="card-top">
+        <div class="company-name">Wegen</div>
+        <div class="pulse-row">
+          <span class="pulse-text">Pulse</span>
+          <div class="ekg-wrap">
+            <svg viewBox="0 0 380 56" preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="ekg2" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%"   stop-color="#c9a84c" stop-opacity="1"/>
+                  <stop offset="65%"  stop-color="#c9a84c" stop-opacity="1"/>
+                  <stop offset="100%" stop-color="#c9a84c" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,28 L52,28
+                       C56,28 59,18 63,18 C67,18 70,28 74,28
+                       L78,28 L81,32 L84,4 L88,47 L91,28
+                       L107,28
+                       C111,28 114,16 119,14 C124,12 127,20 131,28
+                       L380,28"
+                    stroke="url(#ekg2)" stroke-width="1.8"
+                    fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="rule"></div>
+      </div>
+
+      <div class="card-bottom">
+        <div class="person-name">Elizabeth Rohr</div>
+        <div class="person-title">Founder</div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
