@@ -10,32 +10,53 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing image, prompt, or apiKey' });
   }
 
-  // SDXL img2img — stable, widely available, no special permissions required
+  // Step 1: fetch the latest published version of instruct-pix2pix
+  let versionId;
+  try {
+    const vRes = await fetch(
+      'https://api.replicate.com/v1/models/timothybrooks/instruct-pix2pix/versions',
+      { headers: { Authorization: `Token ${apiKey}` } }
+    );
+    if (!vRes.ok) {
+      const d = await vRes.json().catch(() => ({}));
+      return res.status(vRes.status).json({
+        error: `Model lookup failed (${vRes.status}): ${d.detail || JSON.stringify(d)}`,
+      });
+    }
+    const vData = await vRes.json();
+    versionId = vData.results?.[0]?.id;
+    if (!versionId) {
+      return res.status(502).json({ error: 'No versions found for instruct-pix2pix' });
+    }
+  } catch (err) {
+    return res.status(502).json({ error: `Cannot reach Replicate: ${err.message}` });
+  }
+
+  // Step 2: create prediction with that version
   let rpRes, rpData;
   try {
-    rpRes = await fetch('https://api.replicate.com/v1/models/stability-ai/sdxl/predictions', {
+    rpRes = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
         Authorization: `Token ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        version: versionId,
         input: {
-          prompt,
           image,
-          prompt_strength: 0.8,
-          num_inference_steps: 30,
+          prompt,
+          num_inference_steps: 50,
+          image_guidance_scale: 1.5,
           guidance_scale: 7.5,
           num_outputs: 1,
-          width: 512,
-          height: 512,
         },
       }),
     });
     const text = await rpRes.text();
     try { rpData = JSON.parse(text); } catch { rpData = { raw: text }; }
   } catch (err) {
-    return res.status(502).json({ error: `Cannot reach Replicate: ${err.message}` });
+    return res.status(502).json({ error: `Prediction request failed: ${err.message}` });
   }
 
   if (!rpRes.ok) {
