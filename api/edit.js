@@ -10,27 +10,28 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing image, prompt, or apiKey' });
   }
 
-  // instruct-pix2pix — versioned predictions endpoint (more reliable than model-name endpoint)
+  // FLUX Kontext Pro — instruction-based image editing (change outfits, backgrounds, hair, etc.)
   let rpRes;
   try {
-    rpRes = await fetch('https://api.replicate.com/v1/predictions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Token ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        version: '30c1d0b916a6f8efce20493f5d61ee27491ab2a5a5f0b5b09b5c5d2ee0b60c59',
-        input: {
-          image,
-          prompt,
-          num_inference_steps: 50,
-          image_guidance_scale: 1.5,
-          guidance_scale: 7.5,
-          num_outputs: 1,
+    rpRes = await fetch(
+      'https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Token ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'wait=5',
         },
-      }),
-    });
+        body: JSON.stringify({
+          input: {
+            prompt,
+            input_image: image,
+            output_format: 'jpg',
+            safety_tolerance: 2,
+          },
+        }),
+      }
+    );
   } catch (err) {
     return res.status(502).json({ error: `Failed to reach Replicate: ${err.message}` });
   }
