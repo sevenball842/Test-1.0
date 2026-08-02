@@ -18,7 +18,7 @@ if (-not (Test-Path $audioPath)) {
 } else {
     # Start audio playback in background
     $audioPlayer = New-Object System.Media.SoundPlayer($audioPath)
-    $audioPlayer.PlaySync() &
+    $audioPlayer.Play()
 }
 
 # Display initialization sequence
