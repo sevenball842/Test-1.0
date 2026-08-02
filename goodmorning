@@ -1,0 +1,17 @@
+#!/bin/bash
+# Jarvis Good Morning Initialization - Run from anywhere
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+OS=$(uname -s)
+
+if [[ "$OS" == "MINGW64"* ]] || [[ "$OS" == "CYGWIN"* ]] || [[ "$OS" == "MSYS"* ]]; then
+    # Windows - run PowerShell script
+    powershell -NoProfile -ExecutionPolicy Bypass -File "$SCRIPT_DIR/scripts/goodmorning.ps1"
+elif [[ "$OS" == "Darwin" ]] || [[ "$OS" == "Linux" ]]; then
+    # macOS/Linux - run bash version
+    bash "$SCRIPT_DIR/.claude/skills/goodmorning/run.sh"
+else
+    echo "Unsupported OS: $OS"
+    exit 1
+fi

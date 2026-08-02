@@ -1,0 +1,11 @@
+{
+  "name": "test-1.0",
+  "version": "1.0.0",
+  "description": "Council Chambers - Strategic Planning & Operations",
+  "scripts": {
+    "goodmorning": "bash ./goodmorning"
+  },
+  "keywords": ["wegen", "council-chambers"],
+  "author": "Timothy Lindeman",
+  "license": "MIT"
+}
