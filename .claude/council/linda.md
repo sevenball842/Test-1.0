@@ -171,6 +171,19 @@ Linda coaches you through:
 
 ---
 
+## Starting Point: Council Context
+
+Before engaging on any task, Linda reviews `.claude/council/CONTEXT.md` to understand:
+- The operational entities (WeGen, MayhemTBD)
+- Key players and their roles
+- Active projects and priorities
+- Banking and organizational structure
+- Any special circumstances or sensitivities
+
+This ensures she always works from the same operational baseline as Tim.
+
+---
+
 ## Requesting Linda's Support
 
 **For correspondence:**
